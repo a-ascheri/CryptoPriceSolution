@@ -1,5 +1,6 @@
 @page "/price-checker"
 @using System.Net.Http.Json
+@inject HttpClient Http
 
 <div class="container py-5">
     <div class="row justify-content-center">
@@ -7,10 +8,10 @@
             <div class="card shadow-lg border-0">
                 <div class="card-body">
                     <h2 class="card-title text-center mb-4">Consulta de Precios</h2>
-                    <form class="row g-3" @onsubmit="OnSubmit">
+                    <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Moneda base</label>
-                            <select class="form-select" @bind="baseSymbol">
+                            <select class="form-select" @onchange="OnBaseChanged" value="@baseSymbol">
                                 @foreach (var symbol in symbols)
                                 {
                                     <option value="@symbol">@symbol.ToUpper()</option>
@@ -19,26 +20,20 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Moneda destino</label>
-                            <select class="form-select" @bind="targetSymbol">
+                            <select class="form-select" @onchange="OnTargetChanged" value="@targetSymbol">
                                 @foreach (var symbol in GetTargetSymbols())
                                 {
                                     <option value="@symbol">@symbol.ToUpper()</option>
                                 }
                             </select>
                         </div>
-                        <div class="col-12 text-center">
-                            <button type="submit" class="btn btn-primary px-4" disabled="@isLoading">
-                                @if (isLoading)
-                                {
-                                    <span class="spinner-border spinner-border-sm"></span>
-                                }
-                                else
-                                {
-                                    <span>Consultar</span>
-                                }
-                            </button>
-                        </div>
-                    </form>
+                    </div>
+                    <div class="col-12 text-center mt-4">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border"></span>
+                        }
+                    </div>
                     @if (errorMsg != null)
                     {
                         <div class="alert alert-danger mt-4" role="alert">
@@ -58,42 +53,64 @@
 </div>
 
 @code {
-    private string _baseSymbol = "btc";
-    private string baseSymbol
-    {
-        get => _baseSymbol;
-        set
-        {
-            if (_baseSymbol != value)
-            {
-                _baseSymbol = value;
-                // Si la moneda destino no es válida para la base, la resetea a la primera opción válida
-                if (!GetTargetSymbols().Contains(targetSymbol))
-                    targetSymbol = GetTargetSymbols().First();
-            }
-        }
-    }
+    private string baseSymbol = "btc";
     private string targetSymbol = "usd";
     private PriceResult? priceResult;
     private string? errorMsg;
     private bool isLoading = false;
     private readonly string[] symbols = new[] { "btc", "eth", "usd", "eur", "ars", "brl" };
 
-
+    protected override async Task OnInitializedAsync()
+    {
+        await FetchPriceAsync();
+    }
 
     private IEnumerable<string> GetTargetSymbols()
     {
         if (baseSymbol == "btc" || baseSymbol == "eth")
             return new[] { "usd" };
-        // Si es fiat, puede comparar con cualquier otra fiat menos la misma y menos cripto
         return symbols.Where(s => s != baseSymbol && s != "btc" && s != "eth");
     }
 
-    private async Task OnSubmit()
+    private async Task OnBaseChanged(ChangeEventArgs e)
+    {
+        var newBase = e.Value?.ToString() ?? baseSymbol;
+        if (newBase == targetSymbol)
+        {
+            errorMsg = "La moneda base y destino no pueden ser iguales.";
+            priceResult = null;
+            baseSymbol = newBase;
+            StateHasChanged();
+            return;
+        }
+        baseSymbol = newBase;
+        // Si la moneda destino ya no es válida, la resetea
+        if (!GetTargetSymbols().Contains(targetSymbol))
+            targetSymbol = GetTargetSymbols().First();
+        await FetchPriceAsync();
+    }
+
+    private async Task OnTargetChanged(ChangeEventArgs e)
+    {
+        var newTarget = e.Value?.ToString() ?? targetSymbol;
+        if (baseSymbol == newTarget)
+        {
+            errorMsg = "La moneda base y destino no pueden ser iguales.";
+            priceResult = null;
+            targetSymbol = newTarget;
+            StateHasChanged();
+            return;
+        }
+        targetSymbol = newTarget;
+        await FetchPriceAsync();
+    }
+
+    private async Task FetchPriceAsync()
     {
         errorMsg = null;
         priceResult = null;
         isLoading = true;
+        StateHasChanged();
         try
         {
             var url = $"http://localhost:5166/api/prices/{baseSymbol}/{targetSymbol}";
@@ -109,10 +126,8 @@
             errorMsg = "Error al consultar el precio. Verifica la conexión con el backend.";
         }
         isLoading = false;
+        StateHasChanged();
     }
-
-    [Inject]
-    public HttpClient Http { get; set; } = default!;
 
     public class PriceResult
     {
