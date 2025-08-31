@@ -1,0 +1,52 @@
+@page "/price-checker"
+@using System.Net.Http.Json
+
+<h3>Consulta de Precios</h3>
+
+<div>
+    <label>Moneda base:</label>
+    <select @bind="baseSymbol">
+        @foreach (var symbol in symbols)
+        {
+            <option value="@symbol">@symbol.ToUpper()</option>
+        }
+    </select>
+    <label>Moneda destino:</label>
+    <select @bind="targetSymbol">
+        @foreach (var symbol in symbols)
+        {
+            <option value="@symbol">@symbol.ToUpper()</option>
+        }
+    </select>
+    <button @onclick="GetPrice">Consultar</button>
+</div>
+
+@if (priceResult != null)
+{
+    <p>
+        1 @baseSymbol.ToUpper() = <b>@priceResult.price</b> @targetSymbol.ToUpper()
+    </p>
+}
+
+@code {
+    private string baseSymbol = "btc";
+    private string targetSymbol = "usd";
+    private PriceResult? priceResult;
+    private readonly string[] symbols = new[] { "btc", "eth", "usd", "eur", "ars", "brl" };
+
+    private async Task GetPrice()
+    {
+        var url = $"http://localhost:5166/api/prices/{baseSymbol}/{targetSymbol}";
+        priceResult = await Http.GetFromJsonAsync<PriceResult>(url);
+    }
+
+    [Inject]
+    public HttpClient Http { get; set; } = default!;
+
+    public class PriceResult
+    {
+        public string baseSymbol { get; set; }
+        public string targetSymbol { get; set; }
+        public decimal price { get; set; }
+    }
+}
