@@ -34,6 +34,16 @@ builder.Services.AddHttpClient<ExchangeRateProvider>();
 builder.Services.AddScoped<ICurrencyProvider, CoinGeckoProvider>();
 builder.Services.AddScoped<ICurrencyProvider, ExchangeRateProvider>();
 
+// Bonos services registration
+builder.Services.AddHttpClient<CryptoPriceBackend.Providers.BonosProvider>();
+builder.Services.AddScoped<CryptoPriceBackend.Providers.IBonosProvider>(sp =>
+{
+    var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    return new CryptoPriceBackend.Providers.BonosProvider(httpClient, configuration);
+});
+builder.Services.AddScoped<CryptoPriceBackend.Services.IBonosService, CryptoPriceBackend.Services.BonosService>();
+
 
 var app = builder.Build();
 

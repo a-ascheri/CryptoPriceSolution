@@ -1,2 +1,82 @@
 @page "/bonos"
-Bonos
+@using CryptoPriceFrontendWasm.Models
+@inject HttpClient Http
+
+<PageTitle>Bonos</PageTitle>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-6">
+            <div class="card shadow-lg border-0">
+                <div class="card-body">
+                    <h2 class="card-title text-center mb-4">Consulta de Bonos</h2>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Mercado</label>
+                            <input class="form-control" @bind="mercado" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Símbolo</label>
+                            <input class="form-control" @bind="simbolo" />
+                        </div>
+                    </div>
+                    <div class="col-12 text-center mt-4">
+                        <button class="btn btn-primary" @onclick="ConsultarBonos" disabled="@isLoading">Consultar</button>
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border"></span>
+                        }
+                    </div>
+                    @if (errorMsg != null)
+                    {
+                        <div class="alert alert-danger mt-4" role="alert">
+                            @errorMsg
+                        </div>
+                    }
+                    @if (bonoResult != null && errorMsg == null)
+                    {
+                        <div class="alert alert-success mt-4 text-center" role="alert">
+                            <b>@simbolo.ToUpper()</b> - <span class="fs-4">@bonoResult.UltimoPrecio</span> <b>@bonoResult.Moneda</b>
+                            <br />
+                            Variación: @bonoResult.Variacion %<br />
+                            Apertura: @bonoResult.Apertura<br />
+                            Máximo: @bonoResult.Maximo<br />
+                            Mínimo: @bonoResult.Minimo<br />
+                            Fecha/Hora: @bonoResult.FechaHora.ToString("g")<br />
+                            Tendencia: @bonoResult.Tendencia
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string mercado = "argentina";
+    private string simbolo = "AL30";
+    private BonosCotizacionResponse? bonoResult;
+    private string? errorMsg;
+    private bool isLoading = false;
+
+    private async Task ConsultarBonos()
+    {
+        isLoading = true;
+        errorMsg = null;
+        bonoResult = null;
+        try
+        {
+            // El HttpClient ya está configurado con BaseAddress = http://localhost:5166/
+            bonoResult = await Http.GetFromJsonAsync<BonosCotizacionResponse>($"api/bonos/cotizacion/{mercado}/{simbolo}");
+            if (bonoResult == null)
+            {
+                errorMsg = "No se encontró información para el bono.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMsg = "Error consultando el bono: " + ex.Message;
+        }
+        isLoading = false;
+    }
+}
