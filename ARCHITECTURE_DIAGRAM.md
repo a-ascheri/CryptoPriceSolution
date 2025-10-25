@@ -12,25 +12,25 @@
 │                    FRONTEND - Blazor WebAssembly                        │
 │                         (Puerto 5253)                                   │
 │                                                                         │
-│  ┌────────────────────────────────────────────────────────────────┐   │
-│  │  Pages/Bonos.razor                                             │   │
-│  │  ┌──────────────────────────────────────────────────────────┐ │   │
-│  │  │  • Formulario (mercado, símbolo)                         │ │   │
-│  │  │  • Botón "Consultar"                                     │ │   │
-│  │  │  • Visualización de resultados                           │ │   │
-│  │  │  • Manejo de errores                                     │ │   │
-│  │  └──────────────────────────────────────────────────────────┘ │   │
-│  └────────────────────────────────────────────────────────────────┘   │
+│  ┌────────────────────────────────────────────────────────────────┐     │
+│  │  Pages/Bonos.razor                                             │     │
+│  │  ┌──────────────────────────────────────────────────────────┐  │     │
+│  │  │  • Formulario (mercado, símbolo)                         │  │     │
+│  │  │  • Botón "Consultar"                                     │  │     │
+│  │  │  • Visualización de resultados                           │  │     │
+│  │  │  • Manejo de errores                                     │  │     │
+│  │  └──────────────────────────────────────────────────────────┘  │     │
+│  └────────────────────────────────────────────────────────────────┘     │
 │                                                                         │
-│  ┌────────────────────────────────────────────────────────────────┐   │
-│  │  Models/BonosCotizacionResponse.cs                             │   │
-│  │  • DTO para deserializar respuesta                             │   │
-│  └────────────────────────────────────────────────────────────────┘   │
+│  ┌────────────────────────────────────────────────────────────────┐     │
+│  │  Models/BonosCotizacionResponse.cs                             │     │
+│  │  • DTO para deserializar respuesta                             │     │
+│  └────────────────────────────────────────────────────────────────┘     │
 │                                                                         │
-│  ┌────────────────────────────────────────────────────────────────┐   │
-│  │  HttpClient                                                     │   │
-│  │  BaseAddress: http://localhost:5166/                           │   │
-│  └────────────────────────────────────────────────────────────────┘   │
+│  ┌────────────────────────────────────────────────────────────────┐     │
+│  │  HttpClient                                                    │     │
+│  │  BaseAddress: http://localhost:5166/                           │     │
+│  └────────────────────────────────────────────────────────────────┘     │
 └────────────────────────────────┬────────────────────────────────────────┘
                                  │
                                  │ HTTP GET
@@ -41,65 +41,64 @@
 │                      BACKEND - ASP.NET Core API                         │
 │                         (Puerto 5166)                                   │
 │                                                                         │
-│  ┌────────────────────────────────────────────────────────────────┐   │
-│  │  Controllers/BonosController.cs                                │   │
-│  │  ┌──────────────────────────────────────────────────────────┐ │   │
-│  │  │  [HttpGet("cotizacion/{mercado}/{simbolo}")]            │ │   │
-│  │  │  public async Task<ActionResult> GetCotizacion(...)      │ │   │
-│  │  │  {                                                        │ │   │
-│  │  │      var result = await _bonosService                    │ │   │
-│  │  │                         .GetCotizacionAsync(...);         │ │   │
-│  │  │      return Ok(result);                                  │ │   │
-│  │  │  }                                                        │ │   │
-│  │  └──────────────────────────────────────────────────────────┘ │   │
-│  └───────────────────────────┬────────────────────────────────────┘   │
-│                              │                                         │
-│                              │ llama a                                 │
-│                              ▼                                         │
-│  ┌────────────────────────────────────────────────────────────────┐   │
-│  │  Services/BonosService.cs                                      │   │
-│  │  • IBonosService (interfaz)                                    │   │
-│  │  • Capa de lógica de negocio                                   │   │
-│  │  • Delega al Provider                                          │   │
-│  └───────────────────────────┬────────────────────────────────────┘   │
-│                              │                                         │
-│                              │ llama a                                 │
-│                              ▼                                         │
-│  ┌────────────────────────────────────────────────────────────────┐   │
-│  │  Providers/BonosProvider.cs                                    │   │
-│  │  ┌──────────────────────────────────────────────────────────┐ │   │
-│  │  │  • IBonosProvider (interfaz)                             │ │   │
-│  │  │  • GetAccessTokenAsync()                                 │ │   │
-│  │  │    - Lee credenciales de appsettings.json                │ │   │
-│  │  │    - POST /token (OAuth2)                                │ │   │
-│  │  │    - Cachea token en memoria                             │ │   │
-│  │  │    - Calcula expiración                                  │ │   │
-│  │  │    - Renueva automáticamente                             │ │   │
-│  │  │                                                           │ │   │
-│  │  │  • GetCotizacionAsync(mercado, simbolo)                  │ │   │
-│  │  │    - Obtiene token (cache o nuevo)                       │ │   │
-│  │  │    - GET /api/{mercado}/Titulos/{simbolo}/Cotizacion     │ │   │
-│  │  │    - Headers: Authorization: Bearer {token}              │ │   │
-│  │  │    - Deserializa JSON a DTO                              │ │   │
-│  │  └──────────────────────────────────────────────────────────┘ │   │
-│  └───────────────────────────┬────────────────────────────────────┘   │
-│                              │                                         │
-│  ┌────────────────────────────────────────────────────────────────┐   │
-│  │  Models/BonosCotizacionResponse.cs                             │   │
-│  │  • DTO para mapear respuesta de API externa                    │   │
-│  └────────────────────────────────────────────────────────────────┘   │
-│                              │                                         │
-│  ┌────────────────────────────────────────────────────────────────┐   │
-│  │  appsettings.json                                              │   │
-│  │  {                                                              │   │
-│  │    "InvertirOnline": {                                         │   │
-│  │      "BaseUrl": "https://api.invertironline.com",              │   │
-│  │      "Username": "email@example.com",                          │   │
-│  │      "Password": "******",                                     │   │
-│  │      "GrantType": "password"                                   │   │
-│  │    }                                                            │   │
-│  │  }                                                              │   │
-│  └────────────────────────────────────────────────────────────────┘   │
+│  ┌────────────────────────────────────────────────────────────────┐     │
+│  │  Controllers/BonosController.cs                                │     │
+│  │  ┌──────────────────────────────────────────────────────────┐  │     │
+│  │  │  [HttpGet("cotizacion/{mercado}/{simbolo}")]             │  │     │
+│  │  │  public async Task<ActionResult> GetCotizacion(...)      │  │     │
+│  │  │  {                                                       │  │     │
+│  │  │      var result = await _bonosService                    │  │     │
+│  │  │                         .GetCotizacionAsync(...);        │  │     │
+│  │  │      return Ok(result);                                  │  │     │
+│  │  │  }                                                       │  │     │
+│  │  └──────────────────────────────────────────────────────────┘  │     │
+│  └───────────────────────────┬────────────────────────────────────┘     │
+│                              │                                          │
+│                              │ llama a                                  │
+│                              ▼                                          │
+│  ┌────────────────────────────────────────────────────────────────┐     │
+│  │  Services/BonosService.cs                                      │     │
+│  │  • IBonosService (interfaz)                                    │     │
+│  │  • Capa de lógica de negocio                                   │     │
+│  │  • Delega al Provider                                          │     │
+│  └───────────────────────────┬────────────────────────────────────┘     │
+│                              │                                          │
+│                              │ llama a                                  │
+│                              ▼                                          │
+│  ┌────────────────────────────────────────────────────────────────┐     │
+│  │  Providers/BonosProvider.cs                                    │     │
+│  │  ┌──────────────────────────────────────────────────────────┐  │     │
+│  │  │  • IBonosProvider (interfaz)                             │  │     │
+│  │  │  • GetAccessTokenAsync()                                 │  │     │
+│  │  │    - Lee credenciales de appsettings.json                │  │     │
+│  │  │    - POST /token (OAuth2)                                │  │     │
+│  │  │    - Cachea token en memoria                             │  │     │
+│  │  │    - Calcula expiración                                  │  │     │
+│  │  │    - Renueva automáticamente                             │  │     │
+│  │  │  • GetCotizacionAsync(mercado, simbolo)                  │  │     │
+│  │  │    - Obtiene token (cache o nuevo)                       │  │     │
+│  │  │    - GET /api/{mercado}/Titulos/{simbolo}/Cotizacion     │  │     │
+│  │  │    - Headers: Authorization: Bearer {token}              │  │     │
+│  │  │    - Deserializa JSON a DTO                              │  │     │
+│  │  └──────────────────────────────────────────────────────────┘  │     │
+│  └───────────────────────────┬────────────────────────────────────┘     │
+│                              │                                          │
+│  ┌────────────────────────────────────────────────────────────────┐     │
+│  │  Models/BonosCotizacionResponse.cs                             │     │
+│  │  • DTO para mapear respuesta de API externa                    │     │
+│  └────────────────────────────────────────────────────────────────┘     │
+│                              │                                          │
+│  ┌────────────────────────────────────────────────────────────────┐     │
+│  │  appsettings.json                                              │     │
+│  │  {                                                             │     │
+│  │    "InvertirOnline": {                                         │     │
+│  │      "BaseUrl": "https://api.invertironline.com",              │     │
+│  │      "Username": "email@example.com",                          │     │
+│  │      "Password": "******",                                     │     │
+│  │      "GrantType": "password"                                   │     │
+│  │    }                                                           │     │
+│  │  }                                                             │     │
+│  └────────────────────────────────────────────────────────────────┘     │
 └────────────────────────────────┬────────────────────────────────────────┘
                                  │
                                  │ HTTPS
@@ -109,18 +108,18 @@
 │              API EXTERNA - InvertirOnline                               │
 │              https://api.invertironline.com                             │
 │                                                                         │
-│  ┌────────────────────────────────────────────────────────────────┐   │
-│  │  POST /token                                                    │   │
-│  │  • Autentica con username/password                             │   │
-│  │  • Retorna access_token (JWT)                                  │   │
-│  │  • expires_in: 900-1200 segundos                               │   │
-│  └────────────────────────────────────────────────────────────────┘   │
+│  ┌────────────────────────────────────────────────────────────────┐     │
+│  │  POST /token                                                   │     │
+│  │  • Autentica con username/password                             │     │
+│  │  • Retorna access_token (JWT)                                  │     │
+│  │  • expires_in: 900-1200 segundos                               │     │
+│  └────────────────────────────────────────────────────────────────┘     │
 │                                                                         │
-│  ┌────────────────────────────────────────────────────────────────┐   │
-│  │  GET /api/{Mercado}/Titulos/{Simbolo}/Cotizacion               │   │
-│  │  • Requiere: Authorization: Bearer {token}                     │   │
-│  │  • Retorna: JSON con cotización del bono                       │   │
-│  └────────────────────────────────────────────────────────────────┘   │
+│  ┌────────────────────────────────────────────────────────────────┐     │
+│  │  GET /api/{Mercado}/Titulos/{Simbolo}/Cotizacion               │     │
+│  │  • Requiere: Authorization: Bearer {token}                     │     │
+│  │  • Retorna: JSON con cotización del bono                       │     │
+│  └────────────────────────────────────────────────────────────────┘     │
 └─────────────────────────────────────────────────────────────────────────┘
 
 

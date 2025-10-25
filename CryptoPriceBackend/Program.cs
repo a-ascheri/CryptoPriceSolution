@@ -1,6 +1,8 @@
 using CryptoPriceBackend.Services;
 using CryptoPriceBackend.Providers;
 
+// Cargar variables de entorno desde archivo .env si existe
+DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 

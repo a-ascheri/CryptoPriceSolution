@@ -52,3 +52,17 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Archivos de configuración sensibles
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/appsettings.*.local.json
+**/.env
+**/.env.local
+**/.env.*.local
+**/bonos_token.json
+
+# Logs locales
+backend.log
+frontend.log
+*.log

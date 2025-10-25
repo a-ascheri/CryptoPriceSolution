@@ -29,16 +29,27 @@ namespace CryptoPriceBackend.Providers
                 return _cachedToken;
             }
 
-            // Obtener credenciales de appsettings.json
-            var baseUrl = _configuration["InvertirOnline:BaseUrl"];
-            var username = _configuration["InvertirOnline:Username"];
-            var password = _configuration["InvertirOnline:Password"];
-            var grantType = _configuration["InvertirOnline:GrantType"];
+            // Obtener credenciales desde variables de entorno (prioridad) o appsettings.json (respaldo)
+            var baseUrl = Environment.GetEnvironmentVariable("INVERTIRONLINE_BASE_URL") 
+                          ?? _configuration["InvertirOnline:BaseUrl"];
+            var username = Environment.GetEnvironmentVariable("INVERTIRONLINE_USERNAME") 
+                           ?? _configuration["InvertirOnline:Username"];
+            var password = Environment.GetEnvironmentVariable("INVERTIRONLINE_PASSWORD") 
+                           ?? _configuration["InvertirOnline:Password"];
+            var grantType = Environment.GetEnvironmentVariable("INVERTIRONLINE_GRANT_TYPE") 
+                            ?? _configuration["InvertirOnline:GrantType"] 
+                            ?? "password";
 
             if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(username) || 
-                string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(grantType))
+                string.IsNullOrWhiteSpace(password))
             {
-                Console.WriteLine("[BonosProvider] Faltan credenciales en appsettings.json");
+                Console.WriteLine("[BonosProvider] ERROR: Faltan credenciales.");
+                Console.WriteLine("[BonosProvider] Configura las variables de entorno:");
+                Console.WriteLine("[BonosProvider]   - INVERTIRONLINE_BASE_URL");
+                Console.WriteLine("[BonosProvider]   - INVERTIRONLINE_USERNAME");
+                Console.WriteLine("[BonosProvider]   - INVERTIRONLINE_PASSWORD");
+                Console.WriteLine("[BonosProvider]   - INVERTIRONLINE_GRANT_TYPE (opcional, default: 'password')");
+                Console.WriteLine("[BonosProvider] O configúralas en appsettings.json (no recomendado para producción)");
                 return null;
             }
 
