@@ -1,0 +1,456 @@
+@page "/bonos-charts"
+@inject BondDataService BondService
+
+<PageTitle>Bonos - Análisis Histórico</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-lg border-0">
+                <div class="card-body">
+                    <h2 class="card-title text-center mb-4">
+                        <i class="fas fa-chart-line"></i> Análisis Histórico de Bonos
+                    </h2>
+
+                    <!-- Controles de selección -->
+                    <div class="row g-3 mb-4">
+                        <!-- País -->
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">País</label>
+                            <RadzenDropDown @bind-Value="@paisSeleccionado"
+                                          Data="@BonosCatalogo.Paises"
+                                          Change="@OnPaisChanged"
+                                          Style="width: 100%;"
+                                          Placeholder="Seleccionar país..." />
+                        </div>
+
+                        <!-- Bonos para comparar (multiselect) -->
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold">Bonos a Comparar</label>
+                            <RadzenDropDown @bind-Value="@bonosSeleccionados"
+                                          Data="@bonosDisponibles"
+                                          TextProperty="Nombre"
+                                          ValueProperty="Simbolo"
+                                          Multiple="true"
+                                          AllowClear="true"
+                                          Placeholder="Seleccionar bonos..."
+                                          Chips="true"
+                                          Change="@OnBonosChanged"
+                                          Style="width: 100%;" />
+                        </div>
+
+                        <!-- Rango temporal -->
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold">Período</label>
+                            <RadzenDropDown @bind-Value="@rangoTemporal"
+                                          Data="@rangosTemporales"
+                                          TextProperty="Text"
+                                          ValueProperty="Value"
+                                          Change="@OnRangoChanged"
+                                          Style="width: 100%;" />
+                        </div>
+
+                        <!-- Botón actualizar -->
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button class="btn btn-primary w-100" 
+                                    @onclick="CargarDatos" 
+                                    disabled="@isLoading">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                Actualizar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Mensajes de error -->
+                    @if (!string.IsNullOrWhiteSpace(errorMsg))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            @errorMsg
+                            <button type="button" class="btn-close" @onclick="@(() => errorMsg = null)"></button>
+                        </div>
+                    }
+
+                    <!-- Indicador de carga -->
+                    @if (isLoading)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <p class="mt-3 text-muted">Cargando datos históricos...</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos y datos -->
+    @if (!isLoading && seriesData.Any())
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-lg border-0">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4">
+                            <i class="fas fa-chart-area"></i> Evolución de Precios
+                        </h4>
+                        
+                        <RadzenChart Style="width: 100%; height: 450px;">
+                            <RadzenChartTooltipOptions Visible="true" />
+                            <RadzenLegend Position="LegendPosition.Bottom" />
+                            
+                            @foreach (var serie in seriesData)
+                            {
+                                <RadzenLineSeries Data="@serie.Value.Datos" 
+                                                CategoryProperty="Fecha" 
+                                                Title="@serie.Key"
+                                                LineType="LineType.Solid"
+                                                Smooth="true"
+                                                ValueProperty="Precio">
+                                    <RadzenMarkers MarkerType="MarkerType.Circle" />
+                                    <RadzenSeriesDataLabels Visible="false" />
+                                </RadzenLineSeries>
+                            }
+
+                            <RadzenCategoryAxis>
+                                <RadzenAxisTitle Text="Fecha" />
+                            </RadzenCategoryAxis>
+                            
+                            <RadzenValueAxis>
+                                <RadzenAxisTitle Text="Precio" />
+                                <RadzenGridLines Visible="true" />
+                            </RadzenValueAxis>
+                        </RadzenChart>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico de Variación -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-lg border-0">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4">
+                            <i class="fas fa-percentage"></i> Variación Porcentual
+                        </h4>
+                        
+                        <RadzenChart Style="width: 100%; height: 350px;">
+                            <RadzenChartTooltipOptions Visible="true" />
+                            <RadzenLegend Position="LegendPosition.Bottom" />
+                            
+                            @foreach (var serie in seriesData)
+                            {
+                                var datosConVariacion = serie.Value.Datos.Where(d => d.Variacion.HasValue).ToList();
+                                if (datosConVariacion.Any())
+                                {
+                                    <RadzenColumnSeries Data="@datosConVariacion" 
+                                                      CategoryProperty="Fecha" 
+                                                      Title="@serie.Key"
+                                                      ValueProperty="Variacion">
+                                    </RadzenColumnSeries>
+                                }
+                            }
+
+                            <RadzenCategoryAxis>
+                                <RadzenAxisTitle Text="Fecha" />
+                            </RadzenCategoryAxis>
+                            
+                            <RadzenValueAxis>
+                                <RadzenAxisTitle Text="Variación (%)" />
+                                <RadzenGridLines Visible="true" />
+                            </RadzenValueAxis>
+                        </RadzenChart>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de métricas clave -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-lg border-0">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4">
+                            <i class="fas fa-table"></i> Métricas Clave
+                        </h4>
+                        
+                        <RadzenDataGrid Data="@metricas" 
+                                      TItem="BonoMetrica" 
+                                      AllowPaging="false"
+                                      AllowSorting="true"
+                                      Style="width: 100%;">
+                            <Columns>
+                                <RadzenDataGridColumn TItem="BonoMetrica" Property="Simbolo" Title="Bono" Width="120px" />
+                                <RadzenDataGridColumn TItem="BonoMetrica" Property="PrecioActual" Title="Precio Actual" Width="140px" FormatString="{0:N2}" />
+                                <RadzenDataGridColumn TItem="BonoMetrica" Property="PrecioMaximo" Title="Máximo" Width="120px" FormatString="{0:N2}" />
+                                <RadzenDataGridColumn TItem="BonoMetrica" Property="PrecioMinimo" Title="Mínimo" Width="120px" FormatString="{0:N2}" />
+                                <RadzenDataGridColumn TItem="BonoMetrica" Property="PrecioPromedio" Title="Promedio" Width="120px" FormatString="{0:N2}" />
+                                <RadzenDataGridColumn TItem="BonoMetrica" Property="Volatilidad" Title="Volatilidad" Width="120px" FormatString="{0:N2}%" />
+                                <RadzenDataGridColumn TItem="BonoMetrica" Property="VariacionPeriodo" Title="Variación Período" Width="150px">
+                                    <Template Context="data">
+                                        <span class="@(data.VariacionPeriodo >= 0 ? "text-success" : "text-danger")">
+                                            @(data.VariacionPeriodo >= 0 ? "↑" : "↓") @data.VariacionPeriodo.ToString("N2")%
+                                        </span>
+                                    </Template>
+                                </RadzenDataGridColumn>
+                            </Columns>
+                        </RadzenDataGrid>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de datos detallados -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-lg border-0">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4">
+                            <i class="fas fa-list"></i> Datos Históricos Detallados
+                        </h4>
+                        
+                        @foreach (var serie in seriesData)
+                        {
+                            <h5 class="mt-4 mb-3">@serie.Key</h5>
+                            <RadzenDataGrid Data="@serie.Value.Datos" 
+                                          TItem="BonoHistoricoDataPoint" 
+                                          AllowPaging="true"
+                                          PageSize="10"
+                                          AllowSorting="true"
+                                          Style="width: 100%; margin-bottom: 2rem;">
+                                <Columns>
+                                    <RadzenDataGridColumn TItem="BonoHistoricoDataPoint" Property="Fecha" Title="Fecha" Width="180px">
+                                        <Template Context="data">
+                                            @data.Fecha.ToString("dd/MM/yyyy HH:mm")
+                                        </Template>
+                                    </RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="BonoHistoricoDataPoint" Property="Precio" Title="Precio" Width="120px" FormatString="{0:N2}" />
+                                    <RadzenDataGridColumn TItem="BonoHistoricoDataPoint" Property="Apertura" Title="Apertura" Width="120px" FormatString="{0:N2}" />
+                                    <RadzenDataGridColumn TItem="BonoHistoricoDataPoint" Property="Maximo" Title="Máximo" Width="120px" FormatString="{0:N2}" />
+                                    <RadzenDataGridColumn TItem="BonoHistoricoDataPoint" Property="Minimo" Title="Mínimo" Width="120px" FormatString="{0:N2}" />
+                                    <RadzenDataGridColumn TItem="BonoHistoricoDataPoint" Property="Variacion" Title="Variación" Width="120px">
+                                        <Template Context="data">
+                                            @if (data.Variacion.HasValue)
+                                            {
+                                                <span class="@(data.Variacion >= 0 ? "text-success" : "text-danger")">
+                                                    @(data.Variacion >= 0 ? "↑" : "↓") @data.Variacion.Value.ToString("N2")%
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </Template>
+                                    </RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="BonoHistoricoDataPoint" Property="Volumen" Title="Volumen" Width="140px" FormatString="{0:N0}" />
+                                </Columns>
+                            </RadzenDataGrid>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones de exportación -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow-lg border-0">
+                    <div class="card-body text-center">
+                        <button class="btn btn-success me-2" @onclick="ExportarCSV">
+                            <i class="fas fa-file-csv me-2"></i>Descargar CSV
+                        </button>
+                        <button class="btn btn-info" @onclick="ExportarExcel">
+                            <i class="fas fa-file-excel me-2"></i>Descargar Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if (!isLoading)
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-info text-center" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Selecciona un país y uno o más bonos para visualizar los datos históricos.
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string paisSeleccionado = "Argentina";
+    private IEnumerable<string> bonosSeleccionados = new List<string> { "AL30" };
+    private List<BonoInfo> bonosDisponibles = new();
+    private string rangoTemporal = "1M";
+    private bool isLoading = false;
+    private string? errorMsg = null;
+    
+    private Dictionary<string, BonosSerieHistoricaResponse> seriesData = new();
+    private List<BonoMetrica> metricas = new();
+
+    private List<RangoTemporal> rangosTemporales = new()
+    {
+        new RangoTemporal { Value = "1M", Text = "1 Mes" },
+        new RangoTemporal { Value = "3M", Text = "3 Meses" },
+        new RangoTemporal { Value = "6M", Text = "6 Meses" },
+        new RangoTemporal { Value = "1A", Text = "1 Año" },
+        new RangoTemporal { Value = "5A", Text = "5 Años" },
+        new RangoTemporal { Value = "MAX", Text = "Máximo" }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        ActualizarBonosDisponibles();
+        await CargarDatos();
+    }
+
+    private void OnPaisChanged()
+    {
+        ActualizarBonosDisponibles();
+        bonosSeleccionados = new List<string>();
+        seriesData.Clear();
+        metricas.Clear();
+    }
+
+    private void ActualizarBonosDisponibles()
+    {
+        bonosDisponibles = BonosCatalogo.GetBonosPorPais(paisSeleccionado);
+    }
+
+    private async Task OnBonosChanged()
+    {
+        await CargarDatos();
+    }
+
+    private async Task OnRangoChanged()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        if (!bonosSeleccionados.Any())
+        {
+            seriesData.Clear();
+            metricas.Clear();
+            return;
+        }
+
+        isLoading = true;
+        errorMsg = null;
+        StateHasChanged();
+
+        try
+        {
+            var mercado = paisSeleccionado.ToLower();
+            var nuevasSeries = new Dictionary<string, BonosSerieHistoricaResponse>();
+
+            foreach (var simbolo in bonosSeleccionados)
+            {
+                var data = await BondService.GetSerieHistoricaAsync(mercado, simbolo, rangoTemporal);
+                
+                if (data != null && data.Datos.Any())
+                {
+                    nuevasSeries[simbolo] = data;
+                }
+            }
+
+            if (!nuevasSeries.Any())
+            {
+                errorMsg = "No se pudieron obtener datos para los bonos seleccionados.";
+            }
+            else
+            {
+                seriesData = nuevasSeries;
+                CalcularMetricas();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMsg = $"Error al cargar los datos: {ex.Message}";
+            Console.WriteLine($"Error: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CalcularMetricas()
+    {
+        metricas.Clear();
+
+        foreach (var serie in seriesData)
+        {
+            var datos = serie.Value.Datos;
+            if (!datos.Any()) continue;
+
+            var precios = datos.Select(d => d.Precio).ToList();
+            var precioActual = datos.LastOrDefault()?.Precio ?? 0;
+            var precioInicial = datos.FirstOrDefault()?.Precio ?? 0;
+            var precioMaximo = precios.Max();
+            var precioMinimo = precios.Min();
+            var precioPromedio = precios.Average();
+
+            // Calcular volatilidad (desviación estándar)
+            var varianza = precios.Select(p => Math.Pow(p - precioPromedio, 2)).Average();
+            var volatilidad = Math.Sqrt(varianza) / precioPromedio * 100;
+
+            // Variación del período
+            var variacionPeriodo = precioInicial != 0 
+                ? ((precioActual - precioInicial) / precioInicial) * 100 
+                : 0;
+
+            metricas.Add(new BonoMetrica
+            {
+                Simbolo = serie.Key,
+                PrecioActual = precioActual,
+                PrecioMaximo = precioMaximo,
+                PrecioMinimo = precioMinimo,
+                PrecioPromedio = precioPromedio,
+                Volatilidad = volatilidad,
+                VariacionPeriodo = variacionPeriodo
+            });
+        }
+    }
+
+    private void ExportarCSV()
+    {
+        // TODO: Implementar exportación a CSV
+        Console.WriteLine("Exportando a CSV...");
+    }
+
+    private void ExportarExcel()
+    {
+        // TODO: Implementar exportación a Excel
+        Console.WriteLine("Exportando a Excel...");
+    }
+
+    // Clases auxiliares
+    private class RangoTemporal
+    {
+        public string Value { get; set; } = string.Empty;
+        public string Text { get; set; } = string.Empty;
+    }
+
+    private class BonoMetrica
+    {
+        public string Simbolo { get; set; } = string.Empty;
+        public double PrecioActual { get; set; }
+        public double PrecioMaximo { get; set; }
+        public double PrecioMinimo { get; set; }
+        public double PrecioPromedio { get; set; }
+        public double Volatilidad { get; set; }
+        public double VariacionPeriodo { get; set; }
+    }
+}
